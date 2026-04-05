@@ -15,6 +15,15 @@ import (
 const bucketName = "bombo-s3"
 const regionName = "us-east-1"
 
+type S3Client interface {
+	ListBuckets(ctx context.Context, params *s3.ListBucketsInput, optFns ...func(*s3.Options)) (*s3.ListBucketsOutput, error)
+	CreateBucket(ctx context.Context, params *s3.CreateBucketInput, optFns ...func(*s3.Options)) (*s3.CreateBucketOutput, error)
+}
+
+type S3Uploader interface {
+	Upload(ctx context.Context, input *s3.PutObjectInput, opts ...func(*manager.Uploader)) (*manager.UploadOutput, error)
+}
+
 func main() {
 	var (
 		s3Client *s3.Client
@@ -31,7 +40,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	if err = uploadToS3Bucket(ctx, s3Client); err != nil {
+	if err = uploadToS3Bucket(ctx, manager.NewUploader(s3Client), "upload-example.txt"); err != nil {
 		fmt.Printf("unable to uploadToS3Bucket: %v\n", err)
 		os.Exit(1)
 	}
@@ -48,7 +57,7 @@ func initS3Client(ctx context.Context) (*s3.Client, error) {
 	return s3.NewFromConfig(cfg), nil
 }
 
-func createS3Bucket(ctx context.Context, s3Client *s3.Client) error {
+func createS3Bucket(ctx context.Context, s3Client S3Client) error {
 	allBuckets, err := s3Client.ListBuckets(ctx, &s3.ListBucketsInput{})
 	if err != nil {
 		return fmt.Errorf("ListBuckets call failed: %w", err)
@@ -74,12 +83,12 @@ func createS3Bucket(ctx context.Context, s3Client *s3.Client) error {
 	return nil
 }
 
-func uploadToS3Bucket(ctx context.Context, s3Client *s3.Client) error {
-	uploader := manager.NewUploader(s3Client)
+func uploadToS3Bucket(ctx context.Context, uploader S3Uploader, filename string) error {
+	// uploader := manager.NewUploader(s3Client)
 
 	_, err := uploader.Upload(ctx, &s3.PutObjectInput{
 		Bucket: aws.String(bucketName),
-		Key:    aws.String("upload-example.txt"),
+		Key:    aws.String(filename),
 		Body:   strings.NewReader("this is explame upload"),
 	})
 
