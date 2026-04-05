@@ -1,6 +1,5 @@
 # s3-create
-
-Small Go example that:
+Go example that:
 
 - creates the S3 bucket `bombo-s3` if it does not already exist
 - uploads `upload-example.txt` to that bucket
